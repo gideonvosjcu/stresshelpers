@@ -5,29 +5,29 @@
 # Citations:
 
 # WESAD (Wearable Stress and Affect Detection)
-# Philip Schmidt, Attila Reiss, Robert Duerichen, Claus Marberger, and Kristof Van Laerhoven. 2018. 
-# Introducing WESAD, a Multimodal Dataset for Wearable Stress and Affect Detection. 
-# In Proceedings of the 20th ACM International Conference on Multimodal Interaction (ICMI '18). 
+# Philip Schmidt, Attila Reiss, Robert Duerichen, Claus Marberger, and Kristof Van Laerhoven. 2018.
+# Introducing WESAD, a Multimodal Dataset for Wearable Stress and Affect Detection.
+# In Proceedings of the 20th ACM International Conference on Multimodal Interaction (ICMI '18).
 # Association for Computing Machinery, New York, NY, USA, 400–408. DOI:https://doi.org/10.1145/3242969.3242985
 
 # AffectiveROAD:
-# Neska El Haouij, Jean-Michel Poggi, Sylvie Sevestre-Ghalila, Raja Ghozi, and Mériem Jaïdane. 
-# 2018. AffectiveROAD system and database to assess driver's attention. In Proceedings of the 33rd Annual ACM Symposium on Applied Computing (SAC '18). 
+# Neska El Haouij, Jean-Michel Poggi, Sylvie Sevestre-Ghalila, Raja Ghozi, and Mériem Jaïdane.
+# 2018. AffectiveROAD system and database to assess driver's attention. In Proceedings of the 33rd Annual ACM Symposium on Applied Computing (SAC '18).
 # ACM, New York, NY, USA, 800-803. DOI: https://doi.org/10.1145/3167132.3167395. https://dam-prod.media.mit.edu/x/2021/06/14/AffectiveROAD_Data_w1dqSB9.zip
 
 # The SWELL Knowledge Work Dataset for Stress and User Modeling Research
-# Koldijk, S., Sappelli, M., Verberne, S., Neerincx, M., & Kraaij, W. (2014). 
+# Koldijk, S., Sappelli, M., Verberne, S., Neerincx, M., & Kraaij, W. (2014).
 # The SWELL Knowledge Work Dataset for Stress and User Modeling Research.
-# To appear in: Proceedings of the 16th ACM International Conference on Multimodal Interaction (ICMI 2014) (Istanbul, Turkey, 12-16 November 2014). 
+# To appear in: Proceedings of the 16th ACM International Conference on Multimodal Interaction (ICMI 2014) (Istanbul, Turkey, 12-16 November 2014).
 # The dataset can be accessed medio 2015 here: http://persistent-identifier.nl/?identifier=urn:nbn:nl:ui:13-kwrv-3e.
 
 # Non-EEG Dataset for Assessment of Neurological Status
-# Birjandtalab, Javad, Diana Cogan, Maziyar Baran Pouyan, and Mehrdad Nourani, 
-# A Non-EEG Biosignals Dataset for Assessment and Visualization of Neurological Status, 
+# Birjandtalab, Javad, Diana Cogan, Maziyar Baran Pouyan, and Mehrdad Nourani,
+# A Non-EEG Biosignals Dataset for Assessment and Visualization of Neurological Status,
 # 2016 IEEE International Workshop on Signal Processing Systems (SiPS), Dallas, TX, 2016, pp. 110-114. doi: 10.1109/SiPS.2016.27
 
 # Toadstool: A Dataset for Training Emotional Intelligent Machines Playing Super Mario Bros
-# Svoren, H., Thambawita, V., Halvorsen, P., Jakobsen, P., Garcia-Ceja, E., Noori, F. M., … Hicks, S. (2020, February 28). 
+# Svoren, H., Thambawita, V., Halvorsen, P., Jakobsen, P., Garcia-Ceja, E., Noori, F. M., … Hicks, S. (2020, February 28).
 # https://doi.org/10.31219/osf.io/4v9mp
 
 # K-EmoCon, a multimodal sensor dataset for continuous emotion recognition in naturalistic conversations
@@ -35,18 +35,17 @@
 # In Scientific Data (1.0.0, Vol. 7, Number 1, p. 293). Zenodo. https://doi.org/10.5281/zenodo.3931963
 
 # Multilevel Monitoring of Activity and Sleep in Healthy People (version 1.0.0)
-# Rossi, A., Da Pozzo, E., Menicagli, D., Tremolanti, C., Priami, C., Sirbu, A., Clifton, D., Martini, C., & Morelli, D. (2020).. PhysioNet. 
+# Rossi, A., Da Pozzo, E., Menicagli, D., Tremolanti, C., Priami, C., Sirbu, A., Clifton, D., Martini, C., & Morelli, D. (2020).. PhysioNet.
 # https://doi.org/10.13026/cerq-fc86.
 
 #########################################################################################################################################################
 # Helper functions
 #########################################################################################################################################################
 
-# function to compute total within-cluster sum of square 
+# function to compute total within-cluster sum of square
 
 #' Compute Total Within-Cluster Sum of Square
 #'
-#' Convert degrees Fahrenheit temperatures to degrees Celsius
 #' @param data The data frame to apply kmeans to
 #' @param k The starting number of clusters
 #' @return The total within-cluster sum of sqaure
@@ -55,7 +54,13 @@ wss <- function(data, k) {
   stats::kmeans(data, k, nstart = 5 )$tot.withinss
 }
 
-# predict clusters on "new" data given existing kmeans model
+#' Predict clusters on new data given existing kmeans model
+#'
+#' @param object The kmeans model
+#' @param newdata The new data frame
+#' @param method Centers or Classes
+#' @return A vector of predictions
+#' @export
 predict.kmeans <- function(object, newdata, method = c("centers", "classes")) {
   method <- match.arg(method)
   centers <- object$centers
@@ -70,7 +75,11 @@ predict.kmeans <- function(object, newdata, method = c("centers", "classes")) {
   }
 }
 
-# get the mode of a vector
+#' Get the mode of a vector
+#'
+#' @param v The vector
+#' @return The mode
+#' @export
 getmode <- function(v) {
   uniqv <- unique(v)
   uniqv[which.max(tabulate(match(v, uniqv)))]
@@ -121,7 +130,7 @@ read_empatica_events <- function(f) {
   tmp <- scan(f, quiet = TRUE)
   if (length(tmp) > 0)
   {
-    return (data.frame("id" = seq.int(length(tmp)), "time_raw"  = tmp, 
+    return (data.frame("id" = seq.int(length(tmp)), "time_raw"  = tmp,
                        "timestamp" = as.POSIXct(tmp, tz = "GMT", origin = "1970-01-01"), "timedelta" = 0))
   }
   else
@@ -134,7 +143,7 @@ read_empatica_gen <- function(filename, signal_names = NULL) {
   t_start <- scan(filename, nmax = 1, what = numeric(), nlines = 1, skip = 0, sep = ",", quiet = TRUE)
   samplingrate <- scan(filename, nmax = 1, what = numeric(), nlines = 1, skip = 1, sep = ",", quiet = TRUE)
   data <- read.csv(filename, header = FALSE, sep = ",", skip = 2)
-  
+
   if (!is.null(signal_names))
   {
     colnames(data) <- signal_names
@@ -161,10 +170,16 @@ new_recording <- function() {
   return (recording)
 }
 
+#' Reads an Empatica E4 folder of data into a data frame
+#'
+#' @param exdir The folder containing the E4 data
+#' @param header.only Header only, T or F
+#' @return A data frame containing the data
+#' @export
 read.empatica <- function(exdir, header.only = FALSE) {
   recording <- new_recording()
   filelist <- list.files(exdir, pattern = "*.csv", full.names = TRUE)
-  
+
   out <- list()
   for (f in filelist) {
     signal_name <- tolower(gsub(".csv", "", basename(f)))
@@ -188,7 +203,7 @@ read.empatica <- function(exdir, header.only = FALSE) {
       recording$events <- read_empatica_events(f)
       signal_names <- NULL
     }
-    
+
     if (! is.null(signal_names))
       out <- c(out, read_empatica_gen(f, signal_names))
   }
@@ -227,13 +242,13 @@ wfdbdesc <- function(header.filename, read.datetime = TRUE) {
   if (!grepl(".hea$", header.filename)) {
     header.filename <- sprintf("%s.hea", header.filename)
   }
-  
+
   # Read in header file for parsing
   header.filepath <- sprintf("%s%s", root.dir, header.filename)
   header.file <- file(header.filepath)
   header.data <- trimws(strsplit(readChar(header.file,file.size(header.filepath)),"\n")[[1]])
   close(header.file)
-  
+
   # Process the first line of the header (record line):
   record.line <- strsplit(header.data[1]," ")[[1]]
   # Determine what type of record this is: single segment or multi-segment, number of signals, sampling frequency,
@@ -246,14 +261,14 @@ wfdbdesc <- function(header.filename, read.datetime = TRUE) {
     sample.frequency <- as.numeric(record.line[3])
   }
   record.length <- as.numeric(record.line[4])
-  
+
   # Single segment datetimes
   if (read.datetime) {
     base.datetime <- lubridate::dmy(record.line[6]) + lubridate::hms(record.line[5])
   } else {
     base.datetime <- NA
   }
-  
+
   if (grepl("/", record.name)) {
     # Multi segment file
     record.type <- "multi"
@@ -263,14 +278,14 @@ wfdbdesc <- function(header.filename, read.datetime = TRUE) {
     segments <- strsplit(header.data[2:(num.segments+1)], " ")
     segment.lengths <- sapply(segments, function(x) as.numeric(x[2]))
     segment.names <- sapply(segments, function(x) x[1])
-    
+
     # From first valid segment, read descriptions, adc gains, and adc zeros
     first.segment <- segment.names[min(which(segment.names != "~"))]
     layout.filepath <- sprintf("%s%s.hea", root.dir, first.segment)
     layout.file <- file(layout.filepath)
     layout.data <- trimws(strsplit(readChar(layout.file, file.size(layout.filepath)), "\n")[[1]])
     close(layout.file)
-    
+
     signal.lines <- strsplit(layout.data[2:(num.signals+1)], " ") # TODO
     signal.format <- NULL
   } else {
@@ -281,13 +296,13 @@ wfdbdesc <- function(header.filename, read.datetime = TRUE) {
     segment.lengths <- record.length
     signal.format <- as.numeric(signal.lines[[1]][2])
   }
-  
+
   # Read signal descriptions, adc gains, units of measure, and zeros from signal specification
   descriptions <- sapply(signal.lines, function(x) {
     if (length(x) > 9) {
       return(paste(x[-(1:8)],collapse=" "))
     } else {
-      return(x[9])            
+      return(x[9])
     }
   })
   # This extra code determines if there is a baseline
@@ -297,7 +312,7 @@ wfdbdesc <- function(header.filename, read.datetime = TRUE) {
     } else {
       return(as.numeric(substr(x[3], 1, regexpr("/", x[3])-1)))
     }
-    
+
   })
   adc.units <- sapply(signal.lines, function(x) substr(x[3], regexpr("/", x[3])+1, nchar(x[3])))
   # If no baseline is present, zero is set to ADC zero. Otherwise it is equal to the baseline.
@@ -308,7 +323,7 @@ wfdbdesc <- function(header.filename, read.datetime = TRUE) {
       return(as.numeric(x[5]))
     }
   })
-  
+
   return(list(root.dir = root.dir, record.name = record.name, record.type = record.type,
               sample.frequency = sample.frequency,  record.length = record.length, base.datetime = base.datetime,
               signal.format = signal.format, num.signals = num.signals, descriptions = descriptions, adc.gains = adc.gains,
@@ -316,12 +331,17 @@ wfdbdesc <- function(header.filename, read.datetime = TRUE) {
               segment.lengths = segment.lengths))
 }
 
+#' Reads a a PhysioNET file
+#'
+#' @param header.filename The header file
+#' @return A data frame containing the data
+#' @export
 rdsamp <- function(header.filename) {
   siginfo <- wfdbdesc(header.filename, FALSE)
-  
+
   read.data <- function(data.filename, signal.format, num.signals, signal.length, adc.gains, adc.zeros) {
     data.file = file(data.filename, "rb")
-    
+
     if (signal.format == 16) {
       signal.data <- t((array(readBin(data.file, integer(), n = file.size(data.filename)/2, size = 2,
                                       endian = "little"), dim=c(num.signals, signal.length)) - adc.zeros)/adc.gains)
@@ -329,11 +349,11 @@ rdsamp <- function(header.filename) {
       raw.data <- readBin(data.file, integer(), n = file.size(data.filename), size = 1, endian = "little", signed = FALSE)
       signal.data <- t((array(raw.data - 128, dim=c(num.signals, signal.length)) - adc.zeros)/adc.gains)
     }
-    
+
     close(data.file)
     return(signal.data)
   }
-  
+
   if (siginfo$record.type == "single") {
     # If single-segment file, we can simply read and return the first segment.
     return (read.data(data.filename = sprintf("%s%s", siginfo$root.dir, siginfo$segment.names),
@@ -349,7 +369,7 @@ rdsamp <- function(header.filename) {
     # Recursively read data from segments
     valid.segments = sapply(siginfo$segment.names[siginfo$segment.names != "~" & siginfo$segment.lengths > 0],
                             function(x) sprintf("%s%s", siginfo$root.dir, x), USE.NAMES = FALSE)
-    
+
     # Need to check that there are any valid segments
     if(length(valid.segments) > 0) {
       segment.headers <- lapply(valid.segments, function(x) wfdbdesc(x, FALSE))
@@ -362,7 +382,7 @@ rdsamp <- function(header.filename) {
         signal.data[segment.starts[c]:segment.ends[c],indices[[c]]] = segment.data[[c]]
       }
     }
-    
+
     return(signal.data)
   }
 }
@@ -371,7 +391,12 @@ rdsamp <- function(header.filename) {
 # Feature engineering routines
 #########################################################################################################################################################
 
-# downsample a series to match size of another series given by rate
+#' Downsample a series to match size of another series given by rate
+#'
+#' @param data A vector of sensor data
+#' @param rate The sampling rate to downsize to
+#' @return A downsampled vector
+#' @export
 downsample <- function(data, rate)
 {
   result <- c()
@@ -384,6 +409,13 @@ downsample <- function(data, rate)
 
 # create windowed features of a specific window size
 # does not slide
+
+#' Creates new features from Empatica E4 data
+#'
+#' @param data A data frame of EDA and HR sensor data
+#' @param window_size Window size to use for rolling windows
+#' @return An expanded data frame of features
+#' @export
 rolling_features <- function(data, window_size)
 {
   for (row in seq(1,nrow(data), by=window_size))

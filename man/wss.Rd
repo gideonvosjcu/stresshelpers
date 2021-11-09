@@ -15,5 +15,5 @@ wss(data, k)
 The total within-cluster sum of sqaure
 }
 \description{
-Convert degrees Fahrenheit temperatures to degrees Celsius
+Compute Total Within-Cluster Sum of Square
 }
