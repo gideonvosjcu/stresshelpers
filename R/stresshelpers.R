@@ -51,7 +51,7 @@
 #' @return The total within-cluster sum of sqaure
 #' @export
 wss <- function(data, k) {
-  stats::kmeans(data, k, nstart = 5 )$tot.withinss
+  kmeans(data, k, nstart = 5 )$tot.withinss
 }
 
 #' Predict clusters on new data given existing kmeans model
