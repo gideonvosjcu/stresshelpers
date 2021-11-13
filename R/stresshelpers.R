@@ -86,6 +86,79 @@ getmode <- function(v) {
 }
 
 #########################################################################################################################################################
+# Cortisol modelling functions
+#########################################################################################################################################################
+
+#' Connects EDA peaks
+#'
+#' @param peaks The EDA vector
+#' @param peak_height EDA cut-off height to consider as a peak
+#' @param window_size Window size of EDA peak
+#' @return The adjusted vector
+#' @export
+connect_peaks <- function(peaks, peak_height, window_size)
+{
+  new_peaks <- peaks
+  series_length <- length(peaks)
+  for (index in (1:length(peaks)))
+  {
+    subset <- peaks[index:(index+window_size)]
+    subset[is.na(subset)] <- 0
+    if (max(subset) >= peak_height)
+    {
+      subset[which(subset >= peak_height)] <- max(subset)
+    }
+    new_peaks[index:(index+window_size)] <- subset
+  }
+  return (new_peaks[1:series_length])
+}
+
+#' Model a Cortisol curve
+#'
+#' @param x The EDA vector
+#' @param peak_height EDA cut-off height to consider as a peak
+#' @return A vector of Cortisol measurements
+#' @export
+model_cortisol <- function(x, peak_height)
+{
+  peak_last_time <- 90 * 60 # 90 minutes from EDA peak
+  cortisol <- rep(2.5, length(x))
+  max_eda <- max(x) # determine scale
+
+  index <- 1
+  while (index < length(x))
+  {
+    if (x[index] > peak_height)
+    {
+      subset <- x[index:(index+peak_last_time-1)]
+      # from index to peak, scale up
+      max_peak_height <- 20 /max_eda * x[index]
+      step_size <- (max_peak_height - 2.5) / (15 * 60) # step up from 2.5 to max for 15 minutes
+      step <- step_size + 2.5
+      for (j in 1:(15*60))
+      {
+        cortisol[index+j-1] <- step
+        step <- step + step_size
+      }
+      step_size <- (max_peak_height - 2.5) / (75 * 60) # step up from 2.5 to max for 15 minutes
+      step <- step_size
+      for (j in 1:(75 * 60))
+      {
+        cortisol[index+j-1+ (15 * 60)] <- max_peak_height - step
+        step <- step + step_size
+      }
+
+      index <- index + 25 # 25 second window
+    }
+    else
+    {
+      index <- index + 1
+    }
+  }
+  cortisol <- cortisol[1:length(x)]
+  return (cortisol)
+}
+#########################################################################################################################################################
 # Empatica E4 data reader - courtesy of https://github.com/bwrc/empatica-r
 #########################################################################################################################################################
 organise_data <- function(data, samplingrate = NULL) {
@@ -441,6 +514,8 @@ rolling_features <- function(data, window_size)
     data[row:(row+(window_size-1)), "hrrange"] <- max(subset$hr) - min(subset$hr)
     data[row:(row+(window_size-1)), "cov1"] <- cov(subset$hr, subset$eda)
   }
+  data[is.nan(data$edakurt),"edakurt"] <-0
+  data[is.nan(data$edaskew),"edaskew"] <-0
   data <- na.omit(data)
   # move metric to be last column
   metric <- data$metric
