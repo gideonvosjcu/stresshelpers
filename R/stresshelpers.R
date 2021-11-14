@@ -480,8 +480,35 @@ downsample <- function(data, rate)
   return (result)
 }
 
-# create windowed features of a specific window size
-# does not slide
+
+#' Creates new features from Empatica E4 data (HR only)
+#'
+#' @param data A data frame of HR sensor data
+#' @param window_size Window size to use for rolling windows
+#' @return An expanded data frame of features
+#' @export
+rolling_features_simple <- function(data, window_size)
+{
+  for (row in seq(1,nrow(data), by=window_size))
+  {
+    subset <- data[row:(row+(window_size-1)),]
+    data[row:(row+(window_size-1)), "hrmean"] <- mean(subset$hr)
+    data[row:(row+(window_size-1)), "hrmedian"] <- median(subset$hr)
+    data[row:(row+(window_size-1)), "hrstd"] <- sd(subset$hr)
+    data[row:(row+(window_size-1)), "hrmin"] <- min(subset$hr)
+    data[row:(row+(window_size-1)), "hrmax"] <- max(subset$hr)
+    data[row:(row+(window_size-1)), "hrvar"] <- var(subset$hr)
+    data[row:(row+(window_size-1)), "hrskew"] <- skewness(subset$hr)
+    data[row:(row+(window_size-1)), "hrkurt"] <- kurtosis(subset$hr)
+    data[row:(row+(window_size-1)), "hrrange"] <- max(subset$hr) - min(subset$hr)
+  }
+  data <- na.omit(data)
+  # move metric to be last column
+  metric <- data$metric
+  data$metric <- NULL
+  data$metric <- metric
+  return (data)
+}
 
 #' Creates new features from Empatica E4 data
 #'
