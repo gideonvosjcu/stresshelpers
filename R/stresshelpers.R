@@ -42,7 +42,25 @@
 # Helper functions
 #########################################################################################################################################################
 
-# function to compute total within-cluster sum of square
+#' Split a data frame by subject and class label
+#'
+#' @param data The data frame to split
+#' @return Split data set by subject
+#' @export
+split_subject_data <- function(data)
+{
+  subject <- unique(data$Subject)
+  data_list <- split(data, f = data$metric)
+  index <- 1
+  merged <- NULL
+  for (df in data_list)
+  {
+    df$Subject <- paste(subject, '_', index, sep='')
+    merged <- rbind(merged, df)
+    index <- index + 1
+  }
+  return (merged)
+}
 
 #' Compute Total Within-Cluster Sum of Square
 #'
@@ -121,6 +139,9 @@ connect_peaks <- function(peaks, peak_height, window_size)
 #' @export
 model_cortisol <- function(x, peak_height)
 {
+  # E4 HRV signal interval is every 10 seconds
+  # at this point we downsampled EDA to same, so it will now be mean of every 10 seconds
+  # so cortisol singal needs to reflect that too
   peak_last_time <- 90 * 60 # 90 minutes from EDA peak
   cortisol <- rep(2.5, length(x))
   max_eda <- max(x) # determine scale
@@ -158,6 +179,9 @@ model_cortisol <- function(x, peak_height)
   cortisol <- cortisol[1:length(x)]
   return (cortisol)
 }
+
+
+
 #########################################################################################################################################################
 # Empatica E4 data reader - courtesy of https://github.com/bwrc/empatica-r
 #########################################################################################################################################################
@@ -698,4 +722,39 @@ make_swell_data <- function(folder, log_transform = FALSE, feature_engineering =
     data <- rbind(data, temp)
   }
   return (data)
+}
+
+#' Loads Toadstool E4 Data Set
+#'
+#' @param folder Folder containing the E4 data
+#' @return Data frame of Toadstool data set
+#' @export
+make_toadstool_data <- function(folder)
+{
+  data <- NULL
+  indexes <- c(1,2,3,4,5,6,7,9,10)
+  for (subject in indexes)
+  {
+    toad <- stresshelpers:::read.empatica(paste(folder,'/P',subject,sep=''))
+    eda_sampling_rate <- toad$signal$eda$samplingrate
+    eda <- stresshelpers:::downsample(toad$signal$eda$data, eda_sampling_rate)
+    hr <- toad$signal$hr$data
+    shortest_sample <- min(length(hr), length(eda))
+    hr <- hr[1:shortest_sample]
+    eda <- eda[1:shortest_sample]
+    temp <- cbind(eda, hr)
+    temp <- as.data.frame(temp)
+    temp <- na.omit(temp)
+    temp$eda <- log(temp$eda)
+    temp$hr <- log(temp$hr)
+    temp$metric <- 0
+    names(temp) <- c("eda","hr",'metric')
+    temp <- as.data.frame(temp)
+    temp <- stresshelpers:::rolling_features(temp, 25)
+    temp$Subject <- paste('T',subject,sep='')
+    # ignore first 5 and last 5 seconds
+    temp <- temp[5:(nrow(temp)-10),]
+    data <- rbind(data, temp)
+  }
+  return(data)
 }
