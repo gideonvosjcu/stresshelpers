@@ -758,3 +758,34 @@ make_toadstool_data <- function(folder)
   }
   return(data)
 }
+
+#' Loads AffectiveROAD E4 Data Set
+#'
+#' @param folder Folder containing the E4 data
+#' @return Data frame of AffectiveROAD data set
+#' @export
+make_drive_data <- function(folder)
+{
+  data <- NULL
+  indexes <- c(1,2,3,4,5,6,7,8,9,10,11,12,13)
+  for (subject in indexes)
+  {
+    left <- stresshelpers:::read.empatica(paste(folder,'/E4/',subject,'-E4-Drv',subject,'/Left',sep='')) # left hand only
+    hr <- left$signal$hr$data
+    eda_sampling_rate <- left$signal$eda$samplingrate
+    metrics <- read.csv(paste(folder, '/Metrics/SM_Drv',subject,'.csv',sep=''))
+    metrics_sampling_rate <- round(nrow(metrics) / length(hr))
+    eda <- stresshelpers:::downsample(left$signal$eda$data, eda_sampling_rate)
+    metric <- stresshelpers:::downsample(metrics[,1], metrics_sampling_rate)
+    shortest_sample <- min(length(hr), length(eda), length(metric))
+    temp <- data.frame(eda[1:shortest_sample], hr[1:shortest_sample], metric[1:shortest_sample])
+    temp <- as.data.frame(temp)
+    names(temp) <- c( "eda","hr","metric")
+    temp$eda <- log(temp$eda)
+    temp$hr <- log(temp$hr)
+    temp <- stresshelpers:::rolling_features(temp, 25)
+    temp$Subject <- paste('D', subject,sep='')
+    data <- rbind(data,temp)
+  }
+  return(data)
+}
