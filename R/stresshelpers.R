@@ -550,3 +550,152 @@ rolling_features <- function(data, window_size)
   data$metric <- metric
   return (data)
 }
+
+#########################################################################################################################################################
+# Dataframe generation routines
+#########################################################################################################################################################
+
+#' Loads NEURO E4 Data Set
+#'
+#' @param folder Folder containing the E4 data
+#' @param log_transform If TRUE, log-transforms EDA and HR signal
+#' @param feature_engineering If TRUE, generates rolling features
+#' @return Data frame of NEURO data set
+#' @export
+make_neuro_data <- function(folder, log_transform = FALSE, feature_engineering = FALSE)
+{
+  data <- NULL
+  for (subject in 1:20)
+  {
+    file1 <- stresshelpers:::rdsamp(paste(folder,'/Subject', subject, '_AccTempEDA.hea', sep=''))
+    file1 <- as.data.frame(file1)
+    file2 <- stresshelpers:::rdsamp(paste(folder,'/Subject', subject, '_SpO2HR.hea', sep=''))
+    file2 <- as.data.frame(file2)
+    eda <- file1$V5
+    hr <- file2$V2
+    eda_sampling_rate <- round(length(eda) / length(hr))
+    eda <- stresshelpers:::downsample(eda, eda_sampling_rate)
+    shortest <- min(length(eda), length(hr))
+    hr <- hr[1:shortest]
+    eda <- eda[1:shortest]
+    temp <- cbind(eda, hr)
+    names(temp) <- c("eda","hr")
+    temp <- as.data.frame(temp)
+    # first 5 mins is relaxation
+    temp[1:300,"metric"] <- 1
+    # next 5 mins is exercise - ignore (300)
+    temp[301:601,"metric"] <- NA
+    # second relaxation 5 minutes (300) - ignore so can cool/calm down
+    temp[602:902,"metric"] <- NA
+    # 40 seconds - mini stress - (40)
+    temp[903:943,"metric"] <- 2
+    # 5 mins - stress (300)
+    temp[944:1244,"metric"] <- 2
+    # 5 mins relax (300)
+    temp[1245:1545,"metric"] <- 1
+    # 6 minutes stress
+    temp[1546:1906,"metric"] <- 2
+    # relax for 5 mins
+    temp[1907:nrow(temp),"metric"] <- 1
+    temp <- na.omit(temp) # remove entries we want to ignore
+    temp <- as.data.frame(temp)
+    if (log_transform == TRUE)
+    {
+      temp$eda <- log(temp$eda)
+      temp$hr <- log(temp$hr)
+    }
+    if (feature_engineering == TRUE)
+    {
+      temp <- rolling_features(temp, 25)
+    }
+    temp$Subject <- paste('N',subject,sep='')
+    data <- rbind(data, temp)
+  }
+  return (data)
+}
+
+
+#' Loads WESAD E4 Data Set
+#'
+#' @param folder Folder containing the E4 data
+#' @param log_transform If TRUE, log-transforms EDA and HR signal
+#' @param feature_engineering If TRUE, generates rolling features
+#' @return Data frame of WESAD data set
+#' @export
+make_wesad_data <- function(folder, log_transform = FALSE, feature_engineering = FALSE)
+{
+  data <- NULL
+  indexes <- c(3,4,5,6,7,8,9,10,11,13,14,15,16,17)
+  for (subject in indexes)
+  {
+    wesad <- stresshelpers:::read.empatica(paste(folder, '/S', subject, sep=''))
+    eda_sampling_rate <- wesad$signal$eda$samplingrate
+    metrics <- read.csv(paste(folder,'/Metrics/S', subject, '_quest.csv', sep=''), sep=';')
+    metrics <- metrics[1:3,2:9]
+    names(metrics) <- metrics[1,]
+    metrics <- metrics[2:3,]
+    metric <- rep(NA, wesad$properties$length) # NA=transient/not defined
+    for (index in 1:ncol(metrics))
+    {
+      start <- as.numeric(metrics[1,index])*60
+      end <- as.numeric(metrics[2,index])*60
+      if (substr(names(metrics)[index],1,4) == 'Base') metric[start:end] <- 1
+      if (substr(names(metrics)[index],1,4) == 'TSST') metric[start:end] <- 2
+      if (substr(names(metrics)[index],1,3) == 'Fun') metric[start:end] <- 3
+      if (substr(names(metrics)[index],1,4) == 'Medi') metric[start:end] <- 4
+    }
+    hr <- wesad$signal$hr$data # 1Hz, each entry is 10 seconds
+    eda <- stresshelpers:::downsample(wesad$signal$eda$data, eda_sampling_rate)
+    shortest_sample <- min(length(hr), length(eda), length(metric))
+    hr <- hr[1:shortest_sample]
+    eda <- eda[1:shortest_sample]
+    metric <- metric[1:shortest_sample]
+    temp <- cbind(eda, hr, metric)
+    names(temp) <- c("eda", "hr", "metric")
+    temp <- as.data.frame(temp)
+    temp <- na.omit(temp)
+    if (log_transform == TRUE)
+    {
+      temp$eda <- log(temp$eda)
+      temp$hr <- log(temp$hr)
+    }
+    if (feature_engineering == TRUE)
+    {
+      temp <- rolling_features(temp, 25)
+    }
+    temp$Subject <- paste('W', subject, sep='')
+    data <- rbind(data, temp)
+  }
+  data <- data[data$metric <= 2,] # baseline and stressed only on this data set
+  return(data)
+}
+
+
+#' Loads SWELL E4 Data Set
+#'
+#' @param folder Folder containing the E4 data
+#' @param log_transform If TRUE, log-transforms EDA and HR signal
+#' @param feature_engineering If TRUE, generates rolling features
+#' @return Data frame of SWELL data set
+#' @export
+make_swell_data <- function(folder, log_transform = FALSE, feature_engineering = FALSE)
+{
+  data <- NULL
+  indexes <- c(1,2,3,4,5,6,7,9,10,12,13,14,16,17,18,19,20,22,24,25)
+  for (subject in indexes)
+  {
+    temp <- read.csv(paste(folder, '/p', subject, '.csv', sep=''))
+    if (log_transform == TRUE)
+    {
+      temp$eda <- log(temp$eda)
+      temp$hr <- log(temp$hr)
+    }
+    if (feature_engineering == TRUE)
+    {
+      temp <- rolling_features(temp, 25)
+    }
+    temp$Subject <- paste('S', subject, sep='')
+    data <- rbind(data, temp)
+  }
+  return (data)
+}
