@@ -180,7 +180,37 @@ model_cortisol <- function(x, peak_height)
   return (cortisol)
 }
 
-
+#' Add Cortisol curve to existing E4 dataframe
+#'
+#' @param data The dataframe containing EDA signal
+#' @return Data frame with cortisol feature added
+#' @export
+add_cortisol <- function(data)
+{
+  result <- NULL
+  subjects <- unique(data$Subject)
+  for (subject in subjects)
+  {
+    temp <- data[data$Subject == subject,]
+    temp$ID <- seq.int(nrow(temp))
+    temp <- do.call("rbind", replicate(10, temp, simplify = FALSE))
+    temp <- temp %>% arrange(ID)
+    temp$eda <- exp(temp$eda)
+    peak_height <- max(temp$eda, na.rm=TRUE) / 2
+    peaks <- temp$eda
+    peaks[is.na(peaks)] <- 0
+    peaks[peaks < peak_height] <- 0
+    connected <- connect_peaks(peaks, peak_height=peak_height, window_size = 10)
+    cortisol <- model_cortisol(connected, peak_height=peak_height)
+    cortisol[cortisol<2.5] <- 2.5
+    temp$cortisol <- cortisol
+    temp$cortisol <- lm(temp$cortisol ~ poly(temp$ID, 10))$fitted.values
+    temp$eda <- log(temp$eda)
+    temp$ID <- NULL
+    result <- rbind(result, temp)
+  }
+  return(result)
+}
 
 #########################################################################################################################################################
 # Empatica E4 data reader - courtesy of https://github.com/bwrc/empatica-r
@@ -591,14 +621,14 @@ make_neuro_data <- function(folder, log_transform = FALSE, feature_engineering =
   data <- NULL
   for (subject in 1:20)
   {
-    file1 <- stresshelpers:::rdsamp(paste(folder,'/Subject', subject, '_AccTempEDA.hea', sep=''))
+    file1 <- rdsamp(paste(folder,'/Subject', subject, '_AccTempEDA.hea', sep=''))
     file1 <- as.data.frame(file1)
-    file2 <- stresshelpers:::rdsamp(paste(folder,'/Subject', subject, '_SpO2HR.hea', sep=''))
+    file2 <- rdsamp(paste(folder,'/Subject', subject, '_SpO2HR.hea', sep=''))
     file2 <- as.data.frame(file2)
     eda <- file1$V5
     hr <- file2$V2
     eda_sampling_rate <- round(length(eda) / length(hr))
-    eda <- stresshelpers:::downsample(eda, eda_sampling_rate)
+    eda <- downsample(eda, eda_sampling_rate)
     shortest <- min(length(eda), length(hr))
     hr <- hr[1:shortest]
     eda <- eda[1:shortest]
@@ -652,7 +682,7 @@ make_wesad_data <- function(folder, log_transform = FALSE, feature_engineering =
   indexes <- c(3,4,5,6,7,8,9,10,11,13,14,15,16,17)
   for (subject in indexes)
   {
-    wesad <- stresshelpers:::read.empatica(paste(folder, '/S', subject, sep=''))
+    wesad <- read.empatica(paste(folder, '/S', subject, sep=''))
     eda_sampling_rate <- wesad$signal$eda$samplingrate
     metrics <- read.csv(paste(folder,'/Metrics/S', subject, '_quest.csv', sep=''), sep=';')
     metrics <- metrics[1:3,2:9]
@@ -669,7 +699,7 @@ make_wesad_data <- function(folder, log_transform = FALSE, feature_engineering =
       if (substr(names(metrics)[index],1,4) == 'Medi') metric[start:end] <- 4
     }
     hr <- wesad$signal$hr$data # 1Hz, each entry is 10 seconds
-    eda <- stresshelpers:::downsample(wesad$signal$eda$data, eda_sampling_rate)
+    eda <- downsample(wesad$signal$eda$data, eda_sampling_rate)
     shortest_sample <- min(length(hr), length(eda), length(metric))
     hr <- hr[1:shortest_sample]
     eda <- eda[1:shortest_sample]
@@ -735,9 +765,9 @@ make_toadstool_data <- function(folder)
   indexes <- c(1,2,3,4,5,6,7,9,10)
   for (subject in indexes)
   {
-    toad <- stresshelpers:::read.empatica(paste(folder,'/P',subject,sep=''))
+    toad <- read.empatica(paste(folder,'/P',subject,sep=''))
     eda_sampling_rate <- toad$signal$eda$samplingrate
-    eda <- stresshelpers:::downsample(toad$signal$eda$data, eda_sampling_rate)
+    eda <- downsample(toad$signal$eda$data, eda_sampling_rate)
     hr <- toad$signal$hr$data
     shortest_sample <- min(length(hr), length(eda))
     hr <- hr[1:shortest_sample]
@@ -750,7 +780,7 @@ make_toadstool_data <- function(folder)
     temp$metric <- 0
     names(temp) <- c("eda","hr",'metric')
     temp <- as.data.frame(temp)
-    temp <- stresshelpers:::rolling_features(temp, 25)
+    temp <- rolling_features(temp, 25)
     temp$Subject <- paste('T',subject,sep='')
     # ignore first 5 and last 5 seconds
     temp <- temp[5:(nrow(temp)-10),]
@@ -770,22 +800,52 @@ make_drive_data <- function(folder)
   indexes <- c(1,2,3,4,5,6,7,8,9,10,11,12,13)
   for (subject in indexes)
   {
-    left <- stresshelpers:::read.empatica(paste(folder,'/E4/',subject,'-E4-Drv',subject,'/Left',sep='')) # left hand only
+    left <- read.empatica(paste(folder,'/E4/',subject,'-E4-Drv',subject,'/Left',sep='')) # left hand only
     hr <- left$signal$hr$data
     eda_sampling_rate <- left$signal$eda$samplingrate
     metrics <- read.csv(paste(folder, '/Metrics/SM_Drv',subject,'.csv',sep=''))
     metrics_sampling_rate <- round(nrow(metrics) / length(hr))
-    eda <- stresshelpers:::downsample(left$signal$eda$data, eda_sampling_rate)
-    metric <- stresshelpers:::downsample(metrics[,1], metrics_sampling_rate)
+    eda <- downsample(left$signal$eda$data, eda_sampling_rate)
+    metric <- downsample(metrics[,1], metrics_sampling_rate)
     shortest_sample <- min(length(hr), length(eda), length(metric))
     temp <- data.frame(eda[1:shortest_sample], hr[1:shortest_sample], metric[1:shortest_sample])
     temp <- as.data.frame(temp)
     names(temp) <- c( "eda","hr","metric")
     temp$eda <- log(temp$eda)
     temp$hr <- log(temp$hr)
-    temp <- stresshelpers:::rolling_features(temp, 25)
+    temp <- rolling_features(temp, 25)
     temp$Subject <- paste('D', subject,sep='')
     data <- rbind(data,temp)
   }
   return(data)
+}
+
+#' Loads MMASH E4 Data Set
+#'
+#' @param folder Folder containing the E4 data
+#' @return Data frame of MMASH data set
+#' @export
+make_mmash_data <- function(folder)
+{
+  data <- NULL
+  for (subject in 1:20)
+  {
+    file <- read.csv(paste(folder, '/user_', subject, '/Actigraph.csv',sep=''))
+    hr <- file %>% select(HR)
+    file <- read.csv(paste(folder, '/user_', subject, '/saliva.csv',sep=''))
+    CortisolBeforeSleep <- file[file$SAMPLES=='before sleep',"Cortisol.NORM"]
+    CortisolWakeUp <- file[file$SAMPLES=='wake up',"Cortisol.NORM"]
+    file <- read.csv(paste(folder, '/user_', subject, '/questionnaire.csv',sep=''))
+    metric <- file$Daily_stress
+    subject_data <- as.data.frame(hr)
+    names(subject_data) <- c("hr")
+    subject_data$hr <- log(subject_data$hr)
+    subject_data$eda <- 0 # not available in this dataset
+    subject_data$cortisol <- CortisolBeforeSleep
+    subject_data$metric <- metric
+    subject_data$Subject <- paste('M',subject,sep='')
+    subject_data <- rolling_features_simple(subject_data, 25)
+    data <- rbind(data, subject_data)
+  }
+  return (data)
 }
