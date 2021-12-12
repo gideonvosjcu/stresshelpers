@@ -38,6 +38,10 @@
 # Rossi, A., Da Pozzo, E., Menicagli, D., Tremolanti, C., Priami, C., Sirbu, A., Clifton, D., Martini, C., & Morelli, D. (2020).. PhysioNet.
 # https://doi.org/10.13026/cerq-fc86.
 
+# Sensor Data Samples for Biovotion Everion, Empatica E4, Bittium Faros 180, Spacelabs (SL 90217),Tags
+# (From TimeStamp Android App) and Shimmer Consensys GSR (Shimmer3 GSR Development Kit)
+# https://figshare.com/articles/dataset/Sensor_Data_Samples_for_Biovotion_Everion_Empatica_E4_Bittium_Faros_180_Spacelabs_SL_90217_and_Tags_From_TimeStamp_Android_App_/12646217/6
+
 #########################################################################################################################################################
 # Helper functions
 #########################################################################################################################################################
@@ -79,7 +83,7 @@ wss <- function(data, k) {
 #' @param method Centers or Classes
 #' @return A vector of predictions
 #' @export
-predict.kmeans <- function(object, newdata, method = c("centers", "classes")) {
+predict_kmeans <- function(object, newdata, method = c("centers", "classes")) {
   method <- match.arg(method)
   centers <- object$centers
   ss_by_center <- apply(centers, 1, function(x) {
@@ -608,6 +612,43 @@ rolling_features <- function(data, window_size)
 #########################################################################################################################################################
 # Dataframe generation routines
 #########################################################################################################################################################
+#' Loads Hypertension E4 Data Set
+#'
+#' @param folder Folder containing the E4 data
+#' @param log_transform If TRUE, log-transforms EDA and HR signal
+#' @param feature_engineering If TRUE, generates rolling features
+#' @return Data frame of HYPERTENSION data set
+#' @export
+make_hypertension_data <- function(folder, log_transform = FALSE, feature_engineering = FALSE)
+{
+  tension <- read.empatica(paste(folder,'/data',sep=''))
+  metric <- rep(1, 1471) # 1471 = total sample length in seconds
+  metric[577:(577+286)] <- 2 # first 577 secs is baseline, then 286 secs of stress
+  eda_sampling_rate <- tension$signal$eda$samplingrate
+  eda <- stresshelpers::downsample(tension$signal$eda$data, eda_sampling_rate)
+  hr <- tension$signal$hr$data
+  shortest_sample <- min(length(hr), length(eda))
+  hr <- hr[1:shortest_sample]
+  eda <- eda[1:shortest_sample]
+  data <- cbind(eda, hr, metric)
+  data <- as.data.frame(data)
+  data <- na.omit(data)
+  names(data) <- c("eda","hr",'metric')
+  data <- as.data.frame(data)
+  data <- na.omit(data)
+  if (log_transform == TRUE)
+  {
+    data$eda <- log(data$eda)
+    data$hr <- log(data$hr)
+  }
+  if (feature_engineering == TRUE)
+  {
+    data <- rolling_features(data, 25)
+  }
+  data$Subject <- 'HT'
+  return(data)
+}
+
 
 #' Loads NEURO E4 Data Set
 #'
