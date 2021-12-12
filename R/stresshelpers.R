@@ -625,7 +625,7 @@ make_hypertension_data <- function(folder, log_transform = FALSE, feature_engine
   metric <- rep(1, 1471) # 1471 = total sample length in seconds
   metric[577:(577+286)] <- 2 # first 577 secs is baseline, then 286 secs of stress
   eda_sampling_rate <- tension$signal$eda$samplingrate
-  eda <- stresshelpers::downsample(tension$signal$eda$data, eda_sampling_rate)
+  eda <- downsample(tension$signal$eda$data, eda_sampling_rate)
   hr <- tension$signal$hr$data
   shortest_sample <- min(length(hr), length(eda))
   hr <- hr[1:shortest_sample]
