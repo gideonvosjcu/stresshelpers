@@ -42,6 +42,9 @@
 # (From TimeStamp Android App) and Shimmer Consensys GSR (Shimmer3 GSR Development Kit)
 # https://figshare.com/articles/dataset/Sensor_Data_Samples_for_Biovotion_Everion_Empatica_E4_Bittium_Faros_180_Spacelabs_SL_90217_and_Tags_From_TimeStamp_Android_App_/12646217/6
 
+library(dplyr)
+library(e1071)
+
 #########################################################################################################################################################
 # Helper functions
 #########################################################################################################################################################
