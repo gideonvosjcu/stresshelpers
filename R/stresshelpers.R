@@ -42,9 +42,6 @@
 # (From TimeStamp Android App) and Shimmer Consensys GSR (Shimmer3 GSR Development Kit)
 # https://figshare.com/articles/dataset/Sensor_Data_Samples_for_Biovotion_Everion_Empatica_E4_Bittium_Faros_180_Spacelabs_SL_90217_and_Tags_From_TimeStamp_Android_App_/12646217/6
 
-library(dplyr)
-library(e1071)
-
 #########################################################################################################################################################
 # Helper functions
 #########################################################################################################################################################
@@ -559,8 +556,8 @@ rolling_features_simple <- function(data, window_size)
     data[row:(row+(window_size-1)), "hrmin"] <- min(subset$hr)
     data[row:(row+(window_size-1)), "hrmax"] <- max(subset$hr)
     data[row:(row+(window_size-1)), "hrvar"] <- var(subset$hr)
-    data[row:(row+(window_size-1)), "hrskew"] <- skewness(subset$hr)
-    data[row:(row+(window_size-1)), "hrkurt"] <- kurtosis(subset$hr)
+    data[row:(row+(window_size-1)), "hrskew"] <- e1071::skewness(subset$hr)
+    data[row:(row+(window_size-1)), "hrkurt"] <- e1071::kurtosis(subset$hr)
     data[row:(row+(window_size-1)), "hrrange"] <- max(subset$hr) - min(subset$hr)
   }
   data <- na.omit(data)
@@ -588,8 +585,8 @@ rolling_features <- function(data, window_size)
     data[row:(row+(window_size-1)), "edavar"] <- var(subset$eda)
     data[row:(row+(window_size-1)), "edamin"] <- min(subset$eda)
     data[row:(row+(window_size-1)), "edamax"] <- max(subset$eda)
-    data[row:(row+(window_size-1)), "edaskew"] <- skewness(subset$eda)
-    data[row:(row+(window_size-1)), "edakurt"] <- kurtosis(subset$eda)
+    data[row:(row+(window_size-1)), "edaskew"] <- e1071::skewness(subset$eda)
+    data[row:(row+(window_size-1)), "edakurt"] <- e1071::kurtosis(subset$eda)
     data[row:(row+(window_size-1)), "edarange"] <- max(subset$eda) - min(subset$eda)
     data[row:(row+(window_size-1)), "hrmean"] <- mean(subset$hr)
     data[row:(row+(window_size-1)), "hrmedian"] <- median(subset$hr)
@@ -597,8 +594,8 @@ rolling_features <- function(data, window_size)
     data[row:(row+(window_size-1)), "hrmin"] <- min(subset$hr)
     data[row:(row+(window_size-1)), "hrmax"] <- max(subset$hr)
     data[row:(row+(window_size-1)), "hrvar"] <- var(subset$hr)
-    data[row:(row+(window_size-1)), "hrskew"] <- skewness(subset$hr)
-    data[row:(row+(window_size-1)), "hrkurt"] <- kurtosis(subset$hr)
+    data[row:(row+(window_size-1)), "hrskew"] <- e1071::skewness(subset$hr)
+    data[row:(row+(window_size-1)), "hrkurt"] <- e1071::kurtosis(subset$hr)
     data[row:(row+(window_size-1)), "hrrange"] <- max(subset$hr) - min(subset$hr)
     data[row:(row+(window_size-1)), "cov1"] <- cov(subset$hr, subset$eda)
   }
