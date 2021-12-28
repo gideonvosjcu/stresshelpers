@@ -692,8 +692,8 @@ make_ubfc_data <- function(folder, log_transform = FALSE, feature_engineering = 
   }
   range <- function(x){(x-min(x))/(max(x)-min(x))}
   data$metric <- range(data$metric)
-  data[data$metric > 0, "metric"] <- 1 # make logistic
-  data[data$metric < 1, "metric"] <- 0 # make logistic
+  data[data$metric > 0, "metric"] <- 2
+  data[data$metric < 2, "metric"] <- 1
   return (data)
 }
 
