@@ -42,6 +42,10 @@
 # (From TimeStamp Android App) and Shimmer Consensys GSR (Shimmer3 GSR Development Kit)
 # https://figshare.com/articles/dataset/Sensor_Data_Samples_for_Biovotion_Everion_Empatica_E4_Bittium_Faros_180_Spacelabs_SL_90217_and_Tags_From_TimeStamp_Android_App_/12646217/6
 
+# The UBFC-Phys dataset is a public multimodal dataset dedicated to psychophysiological studies
+# Meziati Sabour, Y. Benezeth, P. De Oliveira, J. Chappé, F. Yang. "UBFC-Phys: A Multimodal Database For Psychophysiological Studies Of Social Stress",
+# IEEE Transactions on Affective Computing, 2021.
+
 #########################################################################################################################################################
 # Helper functions
 #########################################################################################################################################################
@@ -648,6 +652,51 @@ make_hypertension_data <- function(folder, log_transform = FALSE, feature_engine
   data$Subject <- 'HT'
   return(data)
 }
+
+#' Loads UBFC Data Set
+#'
+#' @param folder Folder containing the data
+#' @param log_transform If TRUE, log-transforms EDA and HR signal
+#' @param feature_engineering If TRUE, generates rolling features
+#' @return Data frame of UBFC data set
+#' @export
+make_ubfc_data <- function(folder, log_transform = FALSE, feature_engineering = FALSE) {
+  data <- NULL
+  for (subject in 1:43)
+  {
+    hr <- read.csv(paste(folder, '/s', subject, '_hr.csv', sep=''))
+    hr <- hr[,1]
+    eda <- read.csv(paste(folder, '/s', subject, '_eda.csv', sep=''))
+    eda <- eda[,1:2]
+    metric <- eda$metric
+    eda <- eda$eda
+    eda <- stresshelpers::downsample(eda, round(length(eda) / length(hr)))
+    metric <- stresshelpers::downsample(metric, round(length(metric) / length(hr)))
+    shortest <- min(length(eda), length(hr))
+    hr <- hr[1:shortest]
+    eda <- eda[1:shortest]
+    metric <- metric[1:shortest]
+    temp <- cbind(eda, hr, metric)
+    temp <- as.data.frame(na.omit(temp))
+    if (log_transform == TRUE)
+    {
+      temp$eda <- log(temp$eda)
+      temp$hr <- log(temp$hr)
+    }
+    if (feature_engineering == TRUE)
+    {
+      temp <- rolling_features(temp, 25)
+    }
+    temp$Subject <- paste('U', subject, sep='')
+    data <- rbind(data, temp)
+  }
+  range <- function(x){(x-min(x))/(max(x)-min(x))}
+  data$metric <- range(data$metric)
+  data[data$metric > 0, "metric"] <- 1 # make logistic
+  data[data$metric < 1, "metric"] <- 0 # make logistic
+  return (data)
+}
+
 
 
 #' Loads NEURO E4 Data Set
