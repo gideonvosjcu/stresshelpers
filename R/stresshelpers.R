@@ -662,7 +662,7 @@ make_hypertension_data <- function(folder, log_transform = FALSE, feature_engine
 #' @export
 make_ubfc_data <- function(folder, log_transform = FALSE, feature_engineering = FALSE) {
   data <- NULL
-  for (subject in 1:43)
+  for (subject in 1:56)
   {
     hr <- read.csv(paste(folder, '/s', subject, '_hr.csv', sep=''))
     hr <- hr[,1]
