@@ -931,7 +931,7 @@ make_mmash_data <- function(folder)
     names(subject_data) <- c("hr")
     subject_data$hr <- log(subject_data$hr)
     subject_data$eda <- 0 # not available in this dataset
-    subject_data$cortisol <- CortisolBeforeSleep
+    subject_data$cortisol <- CortisolWakeUp
     subject_data$metric <- metric
     subject_data$Subject <- paste('M',subject,sep='')
     subject_data <- rolling_features_simple(subject_data, 25)
