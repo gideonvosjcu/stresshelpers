@@ -112,115 +112,6 @@ getmode <- function(v) {
 }
 
 #########################################################################################################################################################
-# Cortisol modelling functions
-#########################################################################################################################################################
-
-#' Connects EDA peaks
-#'
-#' @param peaks The EDA vector
-#' @param peak_height EDA cut-off height to consider as a peak
-#' @param window_size Window size of EDA peak
-#' @return The adjusted vector
-#' @export
-connect_peaks <- function(peaks, peak_height, window_size)
-{
-  new_peaks <- peaks
-  series_length <- length(peaks)
-  for (index in (1:length(peaks)))
-  {
-    subset <- peaks[index:(index+window_size)]
-    subset[is.na(subset)] <- 0
-    if (max(subset) >= peak_height)
-    {
-      subset[which(subset >= peak_height)] <- max(subset)
-    }
-    new_peaks[index:(index+window_size)] <- subset
-  }
-  return (new_peaks[1:series_length])
-}
-
-#' Model a Cortisol curve
-#'
-#' @param x The EDA vector
-#' @param peak_height EDA cut-off height to consider as a peak
-#' @return A vector of Cortisol measurements
-#' @export
-model_cortisol <- function(x, peak_height)
-{
-  # E4 HRV signal interval is every 10 seconds
-  # at this point we downsampled EDA to same, so it will now be mean of every 10 seconds
-  # so cortisol singal needs to reflect that too
-  peak_last_time <- 90 * 60 # 90 minutes from EDA peak
-  cortisol <- rep(2.5, length(x))
-  max_eda <- max(x) # determine scale
-
-  index <- 1
-  while (index < length(x))
-  {
-    if (x[index] > peak_height)
-    {
-      subset <- x[index:(index+peak_last_time-1)]
-      # from index to peak, scale up
-      max_peak_height <- 20 /max_eda * x[index]
-      step_size <- (max_peak_height - 2.5) / (15 * 60) # step up from 2.5 to max for 15 minutes
-      step <- step_size + 2.5
-      for (j in 1:(15*60))
-      {
-        cortisol[index+j-1] <- step
-        step <- step + step_size
-      }
-      step_size <- (max_peak_height - 2.5) / (75 * 60) # step up from 2.5 to max for 15 minutes
-      step <- step_size
-      for (j in 1:(75 * 60))
-      {
-        cortisol[index+j-1+ (15 * 60)] <- max_peak_height - step
-        step <- step + step_size
-      }
-
-      index <- index + 25 # 25 second window
-    }
-    else
-    {
-      index <- index + 1
-    }
-  }
-  cortisol <- cortisol[1:length(x)]
-  return (cortisol)
-}
-
-#' Add Cortisol curve to existing E4 dataframe
-#'
-#' @param data The dataframe containing EDA signal
-#' @return Data frame with cortisol feature added
-#' @export
-add_cortisol <- function(data)
-{
-  result <- NULL
-  subjects <- unique(data$Subject)
-  for (subject in subjects)
-  {
-    temp <- data[data$Subject == subject,]
-    temp$ID <- seq.int(nrow(temp))
-    temp <- do.call("rbind", replicate(10, temp, simplify = FALSE))
-    temp <- temp %>% arrange(ID)
-    temp$eda <- exp(temp$eda)
-    peak_height <- max(temp$eda, na.rm=TRUE) / 2
-    peaks <- temp$eda
-    peaks[is.na(peaks)] <- 0
-    peaks[peaks < peak_height] <- 0
-    connected <- connect_peaks(peaks, peak_height=peak_height, window_size = 10)
-    cortisol <- model_cortisol(connected, peak_height=peak_height)
-    cortisol[cortisol<2.5] <- 2.5
-    temp$cortisol <- cortisol
-    temp$cortisol <- lm(temp$cortisol ~ poly(temp$ID, 10))$fitted.values
-    temp$eda <- log(temp$eda)
-    temp$ID <- NULL
-    result <- rbind(result, temp)
-  }
-  return(result)
-}
-
-#########################################################################################################################################################
 # Empatica E4 data reader - courtesy of https://github.com/bwrc/empatica-r
 #########################################################################################################################################################
 organise_data <- function(data, samplingrate = NULL) {
@@ -670,8 +561,8 @@ make_ubfc_data <- function(folder, log_transform = FALSE, feature_engineering = 
     eda <- eda[,1:2]
     metric <- eda$metric
     eda <- eda$eda
-    eda <- stresshelpers::downsample(eda, round(length(eda) / length(hr)))
-    metric <- stresshelpers::downsample(metric, round(length(metric) / length(hr)))
+    eda <- downsample(eda, round(length(eda) / length(hr)))
+    metric <- downsample(metric, round(length(metric) / length(hr)))
     shortest <- min(length(eda), length(hr))
     hr <- hr[1:shortest]
     eda <- eda[1:shortest]
@@ -685,15 +576,15 @@ make_ubfc_data <- function(folder, log_transform = FALSE, feature_engineering = 
     }
     if (feature_engineering == TRUE)
     {
-      temp <- rolling_features(temp, 25)
+      temp <- rolling_features(temp, 50) # larger window for this data set
     }
     temp$Subject <- paste('U', subject, sep='')
     data <- rbind(data, temp)
   }
   range <- function(x){(x-min(x))/(max(x)-min(x))}
   data$metric <- range(data$metric)
-  data[data$metric > 0, "metric"] <- 2
-  data[data$metric < 2, "metric"] <- 1
+  data[data$metric < 0.1, "metric"] <- 0
+  data[data$metric > 0, "metric"] <- 1
   return (data)
 }
 
@@ -736,11 +627,11 @@ make_neuro_data <- function(folder, log_transform = FALSE, feature_engineering =
     # 5 mins - stress (300)
     temp[944:1244,"metric"] <- 2
     # 5 mins relax (300)
-    temp[1245:1545,"metric"] <- 1
+    temp[1245:1545,"metric"] <- NA
     # 6 minutes stress
     temp[1546:1906,"metric"] <- 2
     # relax for 5 mins
-    temp[1907:nrow(temp),"metric"] <- 1
+    temp[1907:nrow(temp),"metric"] <- NA
     temp <- na.omit(temp) # remove entries we want to ignore
     temp <- as.data.frame(temp)
     if (log_transform == TRUE)
@@ -755,6 +646,7 @@ make_neuro_data <- function(folder, log_transform = FALSE, feature_engineering =
     temp$Subject <- paste('N',subject,sep='')
     data <- rbind(data, temp)
   }
+  data$metric <- data$metric - 1
   return (data)
 }
 
@@ -811,6 +703,7 @@ make_wesad_data <- function(folder, log_transform = FALSE, feature_engineering =
     data <- rbind(data, temp)
   }
   data <- data[data$metric <= 2,] # baseline and stressed only on this data set
+  data$metric <- data$metric - 1
   return(data)
 }
 
@@ -825,7 +718,7 @@ make_wesad_data <- function(folder, log_transform = FALSE, feature_engineering =
 make_swell_data <- function(folder, log_transform = FALSE, feature_engineering = FALSE)
 {
   data <- NULL
-  indexes <- c(1,2,3,4,5,6,7,9,10,12,13,14,16,17,18,19,20,22,24,25)
+  indexes <- c(1,2,3,9,13,16,17,20,24)
   for (subject in indexes)
   {
     temp <- read.csv(paste(folder, '/p', subject, '.csv', sep=''))
@@ -841,6 +734,7 @@ make_swell_data <- function(folder, log_transform = FALSE, feature_engineering =
     temp$Subject <- paste('S', subject, sep='')
     data <- rbind(data, temp)
   }
+  data$metric <- data$metric - 1
   return (data)
 }
 
